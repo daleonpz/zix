@@ -1,7 +1,10 @@
-# Project
-.nix-home
-
-
+# Zepyhr
+bootloader/
+modules/
+zephyr/
+tools/
+.cmake/
+.west/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
