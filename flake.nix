@@ -12,9 +12,6 @@
         pkgs = import nixpkgs { system = system; };
         python = pkgs.python311;
         pythonPackages = pkgs.python311Packages;
-
-        nixHome = "$PWD/.nix-home";
-        zephyrDir = "~/zephyrproject";
     in
     {
         devShells.${system}.default = pkgs.mkShell {
@@ -35,6 +32,7 @@
                 gcc_multi
                 SDL2
                 which # used in zephyr sdk setup.sh
+                cacert # used in zephyr sdk
                 pythonPackages.pip
                 pythonPackages.setuptools
                 pythonPackages.wheel
@@ -47,23 +45,13 @@
             ];
 
         shellHook = ''
-            export HOME=${nixHome}
-            mkdir -p ${nixHome}
-            if [ -! -d ${zephyrDir} ]; then
-                python -m venv ${zephyrDir}/.venv
-                source ${zephyrDir}/.venv/bin/activate
-                pip install west
-                west init ${zephyrDir} && cd ${zephyrDir}
-                west update
-                west zephyr-export
-                west packages pip --install
-                cd ${zephyrDir}/zephyr
-                west skd install
-            else
-                source ${zephyrDir}/.venv/bin/activate
-                cd ${zephyrDir}
-                west update
-            fi
+            if [ ! -d .env ]; then
+                python -m venv .env
+            fi 
+            source .env/bin/activate
+            export HOME=$(pwd)
+            pip install west
+            west update
         '';
         };
     };
