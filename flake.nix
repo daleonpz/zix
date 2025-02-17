@@ -42,6 +42,15 @@
                 tree
 #                 libmagic
             ];
+
+        shellHook = ''
+            export HOME=$PWD/.nix-home
+            mkdir -p $HOME
+            west init ~/zephyrproject
+            cd ~/zephyrproject
+            west update
+            west zephyr-export
+        '';
         };
     };
 }
