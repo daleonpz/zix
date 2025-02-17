@@ -1,10 +1,8 @@
-
 {
     description = "Flake for Zephyr development";
 
     inputs = {
         nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
-#         zephyr.url = "github:zephyrproject-rtos/zephyr";
     };
 
     outputs = { self, nixpkgs }:
@@ -33,7 +31,12 @@
                 gcc
                 gcc_multi
                 SDL2
-                pythonPackages.west
+                which # used in zephyr sdk setup.sh
+                #pythonPackages.west
+                pythonPackages.pip
+                pythonPackages.setuptools
+                pythonPackages.wheel
+                pythonPackages.tkinter
 #                 patoolib
                 pythonPackages.pyelftools
 # dev tools 
@@ -43,13 +46,28 @@
 #                 libmagic
             ];
 
+# TODO: make a better approach to this, check better zephyr , maybe from west
+#  need pyenv because it make easier to deal with west
+
         shellHook = ''
             export HOME=$PWD/.nix-home
             mkdir -p $HOME
-            west init ~/zephyrproject
-            cd ~/zephyrproject
-            west update
-            west zephyr-export
+            if [ -! -d $HOME/zephyrproject ]; then
+                python -m venv ~/zephyrproject/.venv
+                source ~/zephyrproject/.venv/bin/activate
+                pip install west
+                west init ~/zephyrproject
+                cd ~/zephyrproject
+                west update
+                west zephyr-export
+                west packages pip --intall
+                cd ~/zephyrproject/zephyr
+                west skd install
+            else
+                source ~/zephyrproject/.venv/bin/activate
+                cd ~/zephyrproject
+                west update
+            fi
         '';
         };
     };
