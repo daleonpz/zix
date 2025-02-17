@@ -12,6 +12,9 @@
         pkgs = import nixpkgs { system = system; };
         python = pkgs.python311;
         pythonPackages = pkgs.python311Packages;
+
+        nixHome = "$PWD/.nix-home";
+        zephyrDir = "~/zephyrproject";
     in
     {
         devShells.${system}.default = pkgs.mkShell {
@@ -32,40 +35,33 @@
                 gcc_multi
                 SDL2
                 which # used in zephyr sdk setup.sh
-                #pythonPackages.west
                 pythonPackages.pip
                 pythonPackages.setuptools
                 pythonPackages.wheel
                 pythonPackages.tkinter
-#                 patoolib
                 pythonPackages.pyelftools
-# dev tools 
+                # dev tools 
                 git
                 openssh
                 tree
-#                 libmagic
             ];
 
-# TODO: make a better approach to this, check better zephyr , maybe from west
-#  need pyenv because it make easier to deal with west
-
         shellHook = ''
-            export HOME=$PWD/.nix-home
-            mkdir -p $HOME
-            if [ -! -d $HOME/zephyrproject ]; then
-                python -m venv ~/zephyrproject/.venv
-                source ~/zephyrproject/.venv/bin/activate
+            export HOME=${nixHome}
+            mkdir -p ${nixHome}
+            if [ -! -d ${zephyrDir} ]; then
+                python -m venv ${zephyrDir}/.venv
+                source ${zephyrDir}/.venv/bin/activate
                 pip install west
-                west init ~/zephyrproject
-                cd ~/zephyrproject
+                west init ${zephyrDir} && cd ${zephyrDir}
                 west update
                 west zephyr-export
-                west packages pip --intall
-                cd ~/zephyrproject/zephyr
+                west packages pip --install
+                cd ${zephyrDir}/zephyr
                 west skd install
             else
-                source ~/zephyrproject/.venv/bin/activate
-                cd ~/zephyrproject
+                source ${zephyrDir}/.venv/bin/activate
+                cd ${zephyrDir}
                 west update
             fi
         '';
