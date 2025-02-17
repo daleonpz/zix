@@ -12,6 +12,10 @@
         pkgs = import nixpkgs { system = system; };
         python = pkgs.python311;
         pythonPackages = pkgs.python311Packages;
+        zephyrSdkVersion = "0.17.0";
+        zephyrSdkFile = "zephyr-sdk-${zephyrSdkVersion}_linux-x86_64.tar.xz";
+        zephyrBaseUri = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${zephyrSdkVersion}";
+#         zephyrSdk = import ./sdk.nix { inherit pkgs; inherit (pkgs) fetchurl stdenv; };
     in
     {
         devShells.${system}.default = pkgs.mkShell {
@@ -42,6 +46,7 @@
                 git
                 openssh
                 tree
+#                 zephyrSdk
             ];
 
         shellHook = ''
@@ -52,6 +57,14 @@
             export HOME=$(pwd)
             pip install west
             west update
+
+            if[ ! -d zephyr-sdk-${zephyrSdkVersion} ]; then
+                wget ${zephyrBaseUri}/${zephyrSdkFile}
+                tar xvf ${zephyrSdkFile}
+                rm ${zephyrSdkFile}
+            fi
+            cd zephyr-sdk-${zephyrSdkVersion}
+            ./setup.sh
         '';
         };
     };
