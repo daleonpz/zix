@@ -6,6 +6,8 @@ tools/
 .cmake/
 .west/
 zephyr-sdk-*/
+.wget-hsts
+.local-home/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
