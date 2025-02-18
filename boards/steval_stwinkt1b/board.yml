@@ -1,0 +1,6 @@
+board:
+  name: steval_stwinkt1b
+  full_name: STEVAL STWINKT1B Development kit
+  vendor: st
+  socs:
+   - name: stm32l4r9xx
