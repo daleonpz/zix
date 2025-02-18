@@ -49,7 +49,7 @@
                 python -m venv .env
             fi 
             source .env/bin/activate
-            export HOME=.local-home
+            export HOME=$(pwd)
             pip install west
             west update
             sh scripts/install_zephyr_sdk.sh

@@ -5,7 +5,7 @@ zephyr/
 tools/
 .cmake/
 .west/
-zephyr-sdk-*/
+zephyr-sdk/
 .wget-hsts
 .local-home/
 
