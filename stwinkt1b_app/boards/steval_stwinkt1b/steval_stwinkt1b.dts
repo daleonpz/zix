@@ -16,7 +16,6 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
-
 		zephyr,bt-hci = &hci_spi;
 	};
 
@@ -81,12 +80,15 @@
 // not sure, stm32l4r9i_disco has this but msi
 &clk_msi {
 	status = "okay";
-// 	msi-range = <4>; // <6> in stm32l4r9i_disco
+// 	msi-range = <4>;
 	msi-range = <6>; // <6> in stm32l4r9i_disco
     msi-pll-mode;
 };
 
-&pll1 {
+
+// from zephyr/dts/bindings/clock/st,stm32l4-pll-clock.yaml
+// It can be used to describe 3 different PLLs: PLL, PLLSAI1 and PLLSAI2. Only main PLL is supported for now.
+&pll {
     status = "okay";
     div-m = <1>;
     mul-n = <60>;
@@ -100,161 +102,148 @@
     clocks = <&clk_msi>;
 };
 
-/* checkpoint */
-// &pll1 {
-// 	div-m = <1>;
-// 	mul-n = <10>;
-// 	div-q = <2>;
-// 	div-r = <1>;
-// 	clocks = <&clk_hse>;
-// 	status = "okay";
-// };
-// 
-// &pll2 {
-// 	div-m = <2>;
-// 	mul-n = <48>;
-// 	div-p = <2>;
-// 	div-q = <7>;
-// 	div-r = <25>;
-// 	clocks = <&clk_hse>;
-// 	status = "okay";
-// };
-// 
-// &pll3 {
-// 	div-m = <2>;
-// 	mul-n = <48>;
-// 	div-p = <2>;
-// 	div-q = <25>;
-// 	div-r = <2>;
-// 	clocks = <&clk_hse>;
-// 	status = "okay";
-// };
-
 &rcc {
-	clocks = <&pll1>;
-	clock-frequency = <DT_FREQ_M(160)>;
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(120)>;
 	ahb-prescaler = <1>;
 	apb1-prescaler = <1>;
 	apb2-prescaler = <1>;
-	apb3-prescaler = <1>;
 };
 
-&gpioe {
-	status = "okay";
+// &gpioe {
+// 	status = "okay";
+// 
+// 	/* Enable 2.7V Analog LDO */
+// 	ldo-enable-gpios {
+// 		gpio-hog;
+// 		gpios = <15 GPIO_ACTIVE_HIGH>;
+// 		output-high;
+// 	};
+// };
 
-	/* Enable 2.7V Analog LDO */
-	ldo-enable-gpios {
-		gpio-hog;
-		gpios = <15 GPIO_ACTIVE_HIGH>;
-		output-high;
-	};
-};
-
-stm32_lp_tick_source: &lptim1 {
-	clocks = <&rcc STM32_CLOCK_BUS_APB3 0x00000800>,
-		<&rcc STM32_SRC_LSE LPTIM1_SEL(3)>;
-	status = "okay";
-};
+// stm32_lp_tick_source: &lptim1 {
+// 	clocks = <&rcc STM32_CLOCK_BUS_APB3 0x00000800>,
+// 		<&rcc STM32_SRC_LSE LPTIM1_SEL(3)>;
+// 	status = "okay";
+// };
 
 &usart2 {
-	pinctrl-0 = <&usart2_tx_pd5 &usart2_rx_pd6>;
+	status = "okay";
+	pinctrl-0 = <&usart2_tx_pa2 &usart2_rx_pa3>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
-	status = "okay";
 };
 
-&spi2 {
-	pinctrl-0 = <&spi2_sck_pi1 &spi2_miso_pd3 &spi2_mosi_pi3>;
+&lpuart1 {
+	status = "okay";
+	pinctrl-0 = <&lpuart1_tx_pc1 &lpuart1_rx_pc0>;
 	pinctrl-names = "default";
-	status = "okay";
-
-	cs-gpios = <&gpioh 6 GPIO_ACTIVE_LOW>,
-		   <&gpioh 15 GPIO_ACTIVE_LOW>,
-		   <&gpioi 7 GPIO_ACTIVE_LOW>;
-	iis2dlpc: iis2dlpc@0 {
-		compatible = "st,iis2dlpc";
-		spi-max-frequency = <DT_FREQ_M(10)>;
-		reg = <0>;
-		drdy-gpios = <&gpiof 1 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-		drdy-int =  <1>;
-	};
-
-	ism330dhcx: ism330dhcx@1 {
-		compatible = "st,ism330dhcx";
-		spi-max-frequency = <DT_FREQ_M(10)>;
-		reg = <1>;
-		drdy-gpios =  <&gpiob 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-		int-pin = <1>;
-	};
-
-	iis2iclx: iis2iclx@2 {
-		compatible = "st,iis2iclx";
-		spi-max-frequency = <DT_FREQ_M(10)>;
-		reg = <2>;
-		drdy-gpios = <&gpiof 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-		int-pin =  <2>;
-	};
+	current-speed = <115200>;
 };
 
-&spi3 {
-	pinctrl-0 = <&spi3_sck_pg9 &spi3_miso_pb4 &spi3_mosi_pb5>;
-	pinctrl-names = "default";
+&spi2 { // for BlueNRG-2
+// 	pinctrl-0 = <&spi2_sck_pb13 &spi2_miso_pb14 &spi2_mosi_pb15>; //ref
+	pinctrl-0 = <&spi2_sck_pd1 &spi2_miso_pd3 &spi2_mosi_pc3>;
+    pinctrl-names = "default";
 	status = "okay";
-	cs-gpios = <&gpioe 1 GPIO_ACTIVE_LOW>;
-	hci_spi: bluenrg-2@0 {
-		compatible = "st,hci-spi-v2";
-		reg = <0>;
-		reset-gpios = <&gpiod 13 GPIO_ACTIVE_LOW>;
-		irq-gpios = <&gpiof 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-		spi-cpha; /* CPHA=1 */
-		spi-hold-cs;
-		spi-max-frequency = <DT_FREQ_M(1)>;
-		reset-assert-duration-ms = <6>;
-	};
+    cs-gpios = <&gpiog 5 GPIO_ACTIVE_LOW>; // BlueNRG-2 ..spi1_nss, this may not work ,because PG5 is SPI1_NSS
+    hci_spi: bluenrg-2@0 {
+        compatible = "st,hci-spi-v2";
+        reg = <0>;
+        reset-gpios = <&gpioa 8 GPIO_ACTIVE_LOW>;
+        irq-gpios = <&gpiog 1 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        spi-cpha; /* CPHA=1 */
+        spi-hold-cs;
+        spi-max-frequency = <DT_FREQ_M(1)>;
+        reset-assert-duration-ms = <6>;
+    };
 };
 
-&i2c2 {
-	pinctrl-0 = <&i2c2_scl_ph4 &i2c2_sda_pf0>;
-	pinctrl-names = "default";
-	status = "okay";
-	clock-frequency = <I2C_BITRATE_FAST>;
+&spi3 { // for IIS3DWB (vibrometer) , IIS2DH (3D accelerometer), ISM330DHCX (6-axis IMU)
+    status = "okay"; 
+    pinctrl-0 = <&spi3_sck_pb3 &spi3_miso_pb4 &spi3_mosi_pb5>;
+    pinctrl-names = "default";
 
-	stts22h@3f {
-		compatible = "st,stts22h";
-		reg = <0x3f>;
-		int-gpios = <&gpiof 5 GPIO_ACTIVE_HIGH>;
-		status = "okay";
-	};
+    cs-gpios = <&gpiod 15 GPIO_ACTIVE_LOW>, // IIS2DH
+                <&gpiof 13 GPIO_ACTIVE_LOW>;  // ISM330DHCX
 
-	iis2mdc@1e {
-		compatible = "st,iis2mdc";
-		reg = <0x1e>;
-		drdy-gpios = <&gpiof 9 GPIO_ACTIVE_HIGH>;
-		status = "okay";
-	};
+//            <&gpiof 13 GPIO_ACTIVE_LOW>,  // ISM330DHCX
+//            <&gpiof 5 GPIO_ACTIVE_LOW>;   // IIS3DWB
 
-	ilps22qs@5c {
-		compatible = "st,ilps22qs";
-		reg = <0x5c>;
-		status = "okay";
-	};
+    iis2dh: iis2dh@0 { // 3D accelerometer
+        compatible = "st,iis2dh";
+        spi-max-frequency = <DT_FREQ_M(10)>;
+        reg = <0>;
+        drdy-gpios = <&gpioa 2 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>; // INT2_DH
+        status = "okay";
+    };
+
+    ism330dhcx: ism330dhcx@1 { // 6-axis IMU
+        compatible = "st,ism330dhcx";
+        spi-max-frequency = <DT_FREQ_M(10)>;
+        reg = <1>;
+        drdy-gpios = <&gpioe 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;  // INT1_DHC
+        int-pin = <1>;
+        status = "okay";
+    };
 };
 
-&timers5 {
-	st,prescaler = <10000>;
-	status = "okay";
-
-	pwm5: pwm {
-		status = "okay";
-		pinctrl-0 = <&tim5_ch3_ph12>;
-		pinctrl-names = "default";
-	};
-};
+//     iis3dwb: iis3dwb@0 { // vibrometer
+//         compatible = "st,iis3dwb"; // TODO: there is not compatible in the driver
+//                                     // check this: https://github.com/zephyrproject-rtos/zephyr/pull/40705
+//         spi-max-frequency = <DT_FREQ_M(10)>;
+//         reg = <0>;
+//         drdy-gpios = <&gpioe 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+//         status = "okay";
+//     };
 
 
-&aes {
-	status = "okay";
-};
+
+/// TODO: modify and add this sensors
+// &i2c2 {
+// 	pinctrl-0 = <&i2c2_scl_ph4 &i2c2_sda_pf0>;
+// 	pinctrl-names = "default";
+// 	status = "okay";
+// 	clock-frequency = <I2C_BITRATE_FAST>;
+// 
+// 	stts22h@3f {
+// 		compatible = "st,stts22h";
+// 		reg = <0x3f>;
+// 		int-gpios = <&gpiof 5 GPIO_ACTIVE_HIGH>;
+// 		status = "okay";
+// 	};
+// 
+// 	iis2mdc@1e {
+// 		compatible = "st,iis2mdc";
+// 		reg = <0x1e>;
+// 		drdy-gpios = <&gpiof 9 GPIO_ACTIVE_HIGH>;
+// 		status = "okay";
+// 	};
+// 
+// 	ilps22qs@5c {
+// 		compatible = "st,ilps22qs";
+// 		reg = <0x5c>;
+// 		status = "okay";
+// 	};
+// };
+
+
+// TODO: no idea if i need this
+// &timers5 {
+// 	status = "okay";
+// 
+// 	pwm5: pwm {
+// 		status = "okay";
+// 		pinctrl-0 = <&tim5_ch2_pa1 &tim5_ch4_pi0>;
+// 		pinctrl-names = "default";
+// 	};
+// };
+
+// NO hardware AES
+// this has no aes
+// &aes {
+// 	status = "okay";
+// };
 
 &rng {
 	status = "okay";
@@ -266,52 +255,61 @@ zephyr_udc0: &usbotg_fs {
 	status = "okay";
 };
 
-#include <../boards/common/usb/cdc_acm_serial.dtsi>
+/* checkpoint */
+// ref:~/Documents/git/stwin_AI_vowel_recognition/deployment/Drivers/BSP/STWIN/STWIN_motion_sensors.c
+//     ~/Documents/git/stwin_AI_vowel_recognition/deployment/Core/Inc/STWIN_conf.h
+// zephyr/dts/arm/st/l4/stm32l4.dtsi  -- Current base chip
+// zephyr/dts/arm/st/u5/stm32u5.dtsi -- from the new stwink board
 
-&adc1 {
-	pinctrl-0 = <&adc1_in1_pc0>;
-	pinctrl-names = "default";
-	st,adc-clock-source = "ASYNC";
-	st,adc-prescaler = <4>;
-	vref-mv = <2750>;
+
+// TODO: include adc
+// #include <../boards/common/usb/cdc_acm_serial.dtsi>
+// 
+// &adc1 {
+// 	pinctrl-0 = <&adc1_in1_pc0>;
+// 	pinctrl-names = "default";
+// 	st,adc-clock-source = "ASYNC";
+// 	st,adc-prescaler = <4>;
+// 	vref-mv = <2750>;
+// 	status = "okay";
+// };
+// 
+// &adc4 {
+// 	pinctrl-0 = <&adc4_in3_pc2>;
+// 	pinctrl-names = "default";
+// 	st,adc-clock-source = "ASYNC";
+// 	st,adc-prescaler = <4>;
+// 	vref-mv = <2750>;
+// 	status = "okay";
+// };
+// 
+&die_temp { // internal Temperature sensor
 	status = "okay";
 };
 
-&adc4 {
-	pinctrl-0 = <&adc4_in3_pc2>;
-	pinctrl-names = "default";
-	st,adc-clock-source = "ASYNC";
-	st,adc-prescaler = <4>;
-	vref-mv = <2750>;
+&iwdg { // Independent Watchdog
 	status = "okay";
 };
 
-&die_temp {
+&vref { // Voltage reference, provides a stable voltage for ADC
 	status = "okay";
 };
 
-&iwdg {
+&vbat { // Internal battery voltage sensor
 	status = "okay";
 };
 
-&vref1 {
-	status = "okay";
-};
-
-&vbat4 {
-	status = "okay";
-};
-
-&sdmmc1 {
-	status = "okay";
-	pinctrl-0 = <&sdmmc1_d0_pc8 &sdmmc1_d1_pc9
-		&sdmmc1_d2_pc10 &sdmmc1_d3_pc11
-		&sdmmc1_ck_pc12 &sdmmc1_cmd_pd2>;
-	pinctrl-names = "default";
-	cd-gpios = <&gpiog 1 GPIO_ACTIVE_LOW>;
-	bus-width = <4>;
-	clk-div = <4>;
-};
+// TODO: SD card
+// &sdmmc1 {
+// 	status = "okay";
+// 	pinctrl-0 = <&sdmmc1_d0_pc8 &sdmmc1_d1_pc9
+// 		&sdmmc1_d2_pc10 &sdmmc1_d3_pc11
+// 		&sdmmc1_ck_pc12 &sdmmc1_cmd_pd2>;
+// 	pinctrl-names = "default";
+// 	cd-gpios = <&gpiog 1 GPIO_ACTIVE_LOW>;
+// 	bus-width = <4>;
+// 	clk-div = <4>;
+// };
 
 &flash0 {
 	partitions {
@@ -342,12 +340,12 @@ zephyr_udc0: &usbotg_fs {
 		};
 		storage_partition: partition@f0000 {
 			label = "storage";
-			reg = <0x000f0000 DT_SIZE_K(64)>;
+			reg = <0x000f0000 DT_SIZE_K(64)>; // 1MB in total
 		};
 
 	};
 };
 
-&gpdma1 {
-	status = "okay";
-};
+// &dma1 {
+// 	status = "okay";
+// };
