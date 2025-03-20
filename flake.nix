@@ -51,6 +51,7 @@
             source .env/bin/activate
             export HOME=$(pwd)
             pip install west
+            west init
             west update
             sh scripts/install_zephyr_sdk.sh
         '';
