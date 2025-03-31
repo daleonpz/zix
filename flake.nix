@@ -42,6 +42,7 @@
                 git
                 openssh
                 tree
+                minicom
             ];
 
         shellHook = ''
@@ -54,6 +55,8 @@
             west init
             west update
             sh scripts/install_zephyr_sdk.sh
+
+            sh scripts/install_stm32.sh
         '';
         };
     };

@@ -1,3 +1,12 @@
+# STM32 related
+STMicroelectronics/
+scripts/en.stm32cubeprg-lin-v2-19-0.zip
+
+# Nix related
+typescript
+.vim/
+.viminfo
+
 # Zepyhr
 bootloader/
 modules/
