@@ -50,7 +50,6 @@
                 git
                 openssh
                 tree
-                minicom
             ];
 
         shellHook = ''
