@@ -31,6 +31,7 @@
                 gcc
                 gcc_multi
                 SDL2
+                openocd
                 which # used in zephyr sdk setup.sh
                 cacert # used in zephyr sdk
                 pythonPackages.pip
@@ -38,6 +39,13 @@
                 pythonPackages.wheel
                 pythonPackages.tkinter
                 pythonPackages.pyelftools
+                # mcuboot
+                pythonPackages.click
+                pythonPackages.cryptography
+                pythonPackages.intelhex
+                pythonPackages.cbor2
+                pythonPackages.pyyaml
+                pythonPackages.pytest
                 # dev tools 
                 git
                 openssh
@@ -54,6 +62,8 @@
             west init
             west update
             sh scripts/install_zephyr_sdk.sh
+
+            sh scripts/install_stm32.sh
         '';
         };
     };
