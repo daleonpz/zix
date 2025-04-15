@@ -1,96 +1,86 @@
 /*
- * Copyright (c) 2012-2014 Wind River Systems, Inc.
- * Copyright (c) 2020 Prevas A/S
+ * Copyright (c) 2024 Circuit Dojo
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Copyright (c) 2016 Intel Corporation
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <zephyr/kernel.h>
-#include <zephyr/stats/stats.h>
-#include <zephyr/usb/usb_device.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/uuid.h>
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/mgmt/mcumgr/transport/smp_bt.h>
 
-#ifdef CONFIG_MCUMGR_GRP_FS
-#include <zephyr/device.h>
-#include <zephyr/fs/fs.h>
-#include <zephyr/fs/littlefs.h>
-#endif
-#ifdef CONFIG_MCUMGR_GRP_STAT
-#include <zephyr/mgmt/mcumgr/grp/stat_mgmt/stat_mgmt.h>
-#endif
+/* 1000 msec = 1 sec */
+#define SLEEP_TIME_MS 1000
 
-#define LOG_LEVEL LOG_LEVEL_DBG
-#include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(smp_sample);
+/* The devicetree node identifier for the "led0" alias. */
+#define LED0_NODE DT_ALIAS(led0)
 
-#include "common.h"
+/*
+ * A build error on this line means your board is unsupported.
+ * See the sample documentation for information on how to fix this.
+ */
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
-#define STORAGE_PARTITION_LABEL	storage_partition
-#define STORAGE_PARTITION_ID	FIXED_PARTITION_ID(STORAGE_PARTITION_LABEL)
-
-/* Define an example stats group; approximates seconds since boot. */
-STATS_SECT_START(smp_svr_stats)
-STATS_SECT_ENTRY(ticks)
-STATS_SECT_END;
-
-/* Assign a name to the `ticks` stat. */
-STATS_NAME_START(smp_svr_stats)
-STATS_NAME(smp_svr_stats, ticks)
-STATS_NAME_END(smp_svr_stats);
-
-/* Define an instance of the stats group. */
-STATS_SECT_DECL(smp_svr_stats) smp_svr_stats;
-
-#ifdef CONFIG_MCUMGR_GRP_FS
-FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(cstorage);
-static struct fs_mount_t littlefs_mnt = {
-	.type = FS_LITTLEFS,
-	.fs_data = &cstorage,
-	.storage_dev = (void *)STORAGE_PARTITION_ID,
-	.mnt_point = "/lfs1"
+/* Register advertising data */
+static const struct bt_data ad[] = {
+    BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 };
-#endif
+static const struct bt_data sd[] = {
+    BT_DATA_BYTES(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME)};
 
 int main(void)
 {
-	int rc = STATS_INIT_AND_REG(smp_svr_stats, STATS_SIZE_32,
-				    "smp_svr_stats");
+    int ret;
 
-	if (rc < 0) {
-		LOG_ERR("Error initializing stats system [%d]", rc);
-	}
+    printk("Board: %s\n", CONFIG_BOARD);
+    printk("Build time: " __DATE__ " " __TIME__ "\n");
 
-	/* Register the built-in mcumgr command handlers. */
-#ifdef CONFIG_MCUMGR_GRP_FS
-	rc = fs_mount(&littlefs_mnt);
-	if (rc < 0) {
-		LOG_ERR("Error mounting littlefs [%d]", rc);
-	}
-#endif
+    if (!gpio_is_ready_dt(&led))
+    {
+        return -ENODEV;
+    }
 
-#ifdef CONFIG_MCUMGR_TRANSPORT_BT
-	start_smp_bluetooth_adverts();
-#endif
+    ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+    if (ret < 0)
+    {
+        return -ENODEV;
+    }
 
-	if (IS_ENABLED(CONFIG_USB_DEVICE_STACK)) {
-		rc = usb_enable(NULL);
+    /* Enable Bluetooth */
+    ret = bt_enable(NULL);
+    if (ret < 0)
+    {
+        printk("Bluetooth init failed (err %d)\n", ret);
+        return ret;
+    }
 
-		/* Ignore EALREADY error as USB CDC is likely already initialised */
-		if (rc != 0 && rc != -EALREADY) {
-			LOG_ERR("Failed to enable USB");
-			return 0;
-		}
-	}
-	/* using __TIME__ ensure that a new binary will be built on every
-	 * compile which is convenient when testing firmware upgrade.
-	 */
-	LOG_INF(">>> NEW 01: build time: " __DATE__ " " __TIME__);
+    /* Start advertising */
+    ret = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad),
+            sd, ARRAY_SIZE(sd));
+    if (ret < 0)
+    {
+        printk("Advertising failed to start (err %d)\n", ret);
+        return ret;
+    }
 
-	/* The system work queue handles all incoming mcumgr requests.  Let the
-	 * main thread idle while the mcumgr server runs.
-	 */
-	while (1) {
-		k_sleep(K_MSEC(1000));
-		STATS_INC(smp_svr_stats, ticks);
-	}
-	return 0;
+    while (1)
+    {
+        ret = gpio_pin_toggle_dt(&led);
+        if (ret < 0)
+        {
+            return -ENODEV;
+        }
+        k_msleep(SLEEP_TIME_MS);
+    }
+
+    return 0;
 }

@@ -1,6 +1,10 @@
-# STM32 related
+# MCU tools
 STMicroelectronics/
 scripts/en.stm32cubeprg-lin-v2-19-0.zip
+scripts/JLink_Linux_V794i_x86_64.tgz
+scripts/nrfconnect-5.1.0-x86_64.appimage
+.nrfconnect-apps/
+JLink
 
 # Nix related
 typescript
@@ -17,6 +21,7 @@ tools/
 zephyr-sdk/
 .wget-hsts
 .local-home/
+build-*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
