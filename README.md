@@ -9,6 +9,11 @@
 STM32_INSTALL_DIR="${HOME}/STMicroelectronics/STM32Cube/STM32CubeProgrammer"
 ```
 
+2. Modify `JLINK_INSTALL_DIR` in `scripts/power_profiler_config.sh` to point to where you want to install JLink
+```bash
+JLINK_INSTALL_DIR="${HOME}/JLink"
+```
+
 1. Find out the group of the device
 
 ```bash
@@ -80,4 +85,12 @@ $ nix flake update
 $ nix develop .
 ```
 
+# Using Power Profiler
+1. Start the power profiler
+
+```bash
+$ sh scripts/run_power_profiler.sh
+```
+
+2. If first time, you need to click on `install **Power Profiler**.`
 

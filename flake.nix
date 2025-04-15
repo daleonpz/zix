@@ -24,6 +24,7 @@
                 dfu-util
                 dtc 
                 wget
+                curl
                 python
                 xz
                 file
@@ -62,8 +63,8 @@
             west init
             west update
             sh scripts/install_zephyr_sdk.sh
-
             sh scripts/install_stm32.sh
+            sh scripts/install_power_profiler.sh
         '';
         };
     };
