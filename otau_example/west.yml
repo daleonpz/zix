@@ -1,0 +1,22 @@
+manifest:
+  version: 0.8
+
+  self:
+    path: otau-example
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+      
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v3.5.0
+      description: Zephyr RTOS
+#     explicitly add Zephyr-specific West extensions (build, flash, debug)
+      west-commands: scripts/west-commands.yml
+      import: true
+#       import:
+#         name-allowlist:
+#           - cmsis
+#           - hal_nordic 
