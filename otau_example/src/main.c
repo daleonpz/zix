@@ -42,6 +42,7 @@ int main(void)
     int ret;
 
     printk("Board: %s\n", CONFIG_BOARD);
+    printk(">>> Revision: %s\n", VERSION_STRING);
     printk("Build time: " __DATE__ " " __TIME__ "\n");
 
     if (!gpio_is_ready_dt(&led))
