@@ -14,9 +14,14 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
-#include <zephyr/bluetooth/uuid.h>
+// #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
 #include <zephyr/mgmt/mcumgr/transport/smp_bt.h>
+
+#define LOG_LEVEL LOG_LEVEL_DBG
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(otau_smp_sample);
 
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS 1000
@@ -33,9 +38,14 @@ static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 /* Register advertising data */
 static const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+    BT_DATA_BYTES(BT_DATA_UUID128_ALL, SMP_BT_SVC_UUID_VAL),
 };
+// static const struct bt_data sd[] = {
+//     BT_DATA_BYTES(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME)};
+
 static const struct bt_data sd[] = {
-    BT_DATA_BYTES(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME)};
+    BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+};
 
 int main(void)
 {
@@ -65,8 +75,7 @@ int main(void)
     }
 
     /* Start advertising */
-    ret = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad),
-            sd, ARRAY_SIZE(sd));
+    ret = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (ret < 0)
     {
         printk("Advertising failed to start (err %d)\n", ret);
