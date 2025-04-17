@@ -85,6 +85,21 @@ static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
             bt_security_err_to_str(reason));
 }
 
+static void pairing_confirm(struct bt_conn *conn)
+{
+    int err = -1;
+
+    err = bt_conn_auth_pairing_confirm(conn);
+    if (err) {
+        LOG_ERR("Pairing confirm failed (err %d)", err);
+        return;
+    }
+
+    char addr[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+    LOG_DBG("Pairing confirmed: %s", addr);
+}
+
 static void security_changed(struct bt_conn *conn, bt_security_t level,
                          enum bt_security_err err)
 {
@@ -131,6 +146,7 @@ static void start_adv(void)
 static struct bt_conn_auth_cb conn_auth_callbacks = {
     .passkey_display = auth_passkey_display,
     .cancel = auth_cancel,
+    .pairing_confirm = pairing_confirm,
 };
 
 static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
@@ -144,6 +160,14 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
     .security_changed = security_changed,
 };
 
+
+// BT_GATT_SERVICE_DEFINE(smp_service,
+//     BT_GATT_PRIMARY_SERVICE(SMP_BT_SVC_UUID),
+//     BT_GATT_CHARACTERISTIC(SMP_BT_CHR_UUID,
+//                            BT_GATT_CHRC_WRITE | BT_GATT_CHRC_READ,
+//                            BT_GATT_PERM_WRITE_AUTHEN | BT_GATT_PERM_READ_AUTHEN,
+//                            NULL, NULL, NULL),
+// );
 
 int main(void)
 {
