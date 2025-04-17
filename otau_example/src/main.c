@@ -12,6 +12,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 // #include <zephyr/bluetooth/uuid.h>
@@ -51,9 +52,9 @@ int main(void)
 {
     int ret;
 
-    printk("Board: %s\n", CONFIG_BOARD);
-    printk(">>> Revision: %s\n", VERSION_STRING);
-    printk("Build time: " __DATE__ " " __TIME__ "\n");
+    LOG_DBG("Board: %s", CONFIG_BOARD);
+    LOG_DBG(">>> Revision: %s", VERSION_STRING);
+    LOG_DBG("Build time: " __DATE__ " " __TIME__ "");
 
     if (!gpio_is_ready_dt(&led))
     {
@@ -70,15 +71,26 @@ int main(void)
     ret = bt_enable(NULL);
     if (ret < 0)
     {
-        printk("Bluetooth init failed (err %d)\n", ret);
+        LOG_ERR("Bluetooth init failed (err %d)", ret);
         return ret;
+    }
+
+    /* Initialize settings */
+    if (IS_ENABLED(CONFIG_SETTINGS))
+    {
+        ret = settings_load();
+        if (ret < 0)
+        {
+            LOG_ERR("Settings load failed (err %d)", ret);
+            return ret;
+        }
     }
 
     /* Start advertising */
     ret = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (ret < 0)
     {
-        printk("Advertising failed to start (err %d)\n", ret);
+        LOG_DBG("Advertising failed to start (err %d)", ret);
         return ret;
     }
 
