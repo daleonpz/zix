@@ -1,8 +1,14 @@
-# SPDX-License-Identifier: Apache-2.0
 cmake_minimum_required(VERSION 3.20.0)
-set(BOARD "nucleo_wb55rg")
+# set(BOARD "nucleo_wb55rg")
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(otau-example)
+
+# this come from sysbuild
+message(STATUS "Board: ${BOARD}")
+
+zephyr_get(VERSION_MAJOR SYSBUILD GLOBAL)
+zephyr_get(VERSION_MINOR SYSBUILD GLOBAL)
+zephyr_get(VERSION_PATCH SYSBUILD GLOBAL)
 
 if(NOT DEFINED VERSION_MAJOR)
     set(VERSION_MAJOR 0)
@@ -20,6 +26,7 @@ else()
     set(VERSION_PATCH ${VERSION_PATCH})
 endif()
 
+message(STATUS "Version: ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 # Set the version string
 set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" CACHE STRING "Version string" FORCE)
 set(VERSION_NUMBER "${VERSION_MAJOR}${VERSION_MINOR}${VERSION_PATCH}" CACHE STRING "Version number" FORCE)
