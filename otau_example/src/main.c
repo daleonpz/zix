@@ -38,16 +38,77 @@ static void start_adv(void);
  */
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
+/* custom service */
+#define BT_UUID_CUSTOM_SERVICE_VAL \
+        BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef0)
+
+static const struct bt_uuid_128 primary_service_uuid = BT_UUID_INIT_128(
+            BT_UUID_CUSTOM_SERVICE_VAL);
+
+static const struct bt_uuid_128 read_characteristic_uuid = BT_UUID_INIT_128(
+            BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef1));
+
+static const struct bt_uuid_128 write_characteristic_uuid = BT_UUID_INIT_128(
+            BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef2));
+
+static int signed_value;
+static struct bt_le_adv_param adv_param;
+static int bond_count;
+
+static ssize_t read_signed(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+        void *buf, uint16_t len, uint16_t offset)
+{
+    int *value = &signed_value;
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
+            sizeof(signed_value));
+}
+
+static ssize_t write_signed(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+        const void *buf, uint16_t len, uint16_t offset,
+        uint8_t flags)
+{
+    int *value = &signed_value;
+
+    if (offset + len > sizeof(signed_value)) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+    }
+
+    memcpy(value + offset, buf, len);
+
+    LOG_DBG("Write signed value: %d", *value);
+
+    return len;
+}
+
+/* Vendor Primary Service Declaration */
+BT_GATT_SERVICE_DEFINE(primary_service,
+        BT_GATT_PRIMARY_SERVICE(&primary_service_uuid),
+        BT_GATT_CHARACTERISTIC(&read_characteristic_uuid.uuid,
+            BT_GATT_CHRC_READ,
+            BT_GATT_PERM_READ_AUTHEN,
+            read_signed, NULL, NULL),
+        BT_GATT_CHARACTERISTIC(&write_characteristic_uuid.uuid,
+            BT_GATT_CHRC_WRITE,
+            BT_GATT_PERM_WRITE_AUTHEN,
+            NULL, write_signed, NULL),
+        );
+
 /* Register advertising data */
 static const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-    BT_DATA_BYTES(BT_DATA_UUID128_ALL, SMP_BT_SVC_UUID_VAL),
+//     BT_DATA_BYTES(BT_DATA_UUID128_ALL, SMP_BT_SVC_UUID_VAL),
+    BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_CUSTOM_SERVICE_VAL),
 };
 
 static const struct bt_data sd[] = {
     BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
+
+/**********************************************
+ * Callbacks BLE 
+ *********************************************/
 static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
 {
     char addr[BT_ADDR_LE_STR_LEN];
