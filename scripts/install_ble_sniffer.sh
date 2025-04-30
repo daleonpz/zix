@@ -46,3 +46,28 @@ if [ $? -ne 0 ]; then
     echo "Error installing device. Please check the logs."
     exit 1
 fi
+
+NRF_RULES_URL="https://raw.githubusercontent.com/NordicSemiconductor/nrf-udev/refs/heads/main/nrf-udev_1.0.1-all/lib/udev/rules.d/71-nrf.rules"
+NRF_RULES_BLACKLIST_URL="https://raw.githubusercontent.com/NordicSemiconductor/nrf-udev/refs/heads/main/nrf-udev_1.0.1-all/lib/udev/rules.d/99-mm-nrf-blacklist.rules"
+
+if [ ! -f /lib/udev/rules.d/71-nrf.rules ]; then
+    echo "Downloading nRF rules..."
+    wget "${NRF_RULES_URL}" -O ${SCRIPT_DIR}/71-nrf.rules
+    echo "**NOTE**: From outside nix-shell copy nRF rules to /lib/udev/rules.d/ to avoid permission issues."
+    echo "         run 'sudo cp ${SCRIPT_DIR}/71-nrf.rules /lib/udev/rules.d/'"
+    echo " Restart your computer to apply the changes."
+else
+    echo "nRF rules already exist."
+fi
+
+if [ ! -f /lib/udev/rules.d/99-mm-nrf-blacklist.rules ]; then
+    echo "Downloading nRF blacklist rules..."
+    wget "${NRF_RULES_BLACKLIST_URL}" -O ${SCRIPT_DIR}/99-mm-nrf-blacklist.rules
+    echo "**NOTE**: From outside nix-shell copy nRF blacklist rules to /lib/udev/rules.d/ to avoid permission issues."
+    echo "         run 'sudo cp ${SCRIPT_DIR}/99-mm-nrf-blacklist.rules /lib/udev/rules.d/'"
+    echo " Restart your computer to apply the changes."
+else
+    echo "nRF blacklist rules already exist."
+fi
+
+
