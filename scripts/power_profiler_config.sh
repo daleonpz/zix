@@ -31,18 +31,3 @@ JLINK_URL="https://www.segger.com/downloads/jlink/${JLINK_FILE}"
 
 ###### MODIFY THIS VARIABLE TO CHANGE THE INSTALLATION DIRECTORY ###########
 JLINK_INSTALL_DIR="${HOME}/JLink"
-
-#############################################
-# Setting for the BLE Sniffer
-#############################################
-# This version of JLink is required for the Power Profiler
-SNIFF_JLINK_VER="818"
-SNIFF_JLINK_DIR="JLink_Linux_V${SNIFF_JLINK_VER}_x86_64"
-SNIFF_JLINK_FILE="${SNIFF_JLINK_DIR}.tgz"
-SNIFF_JLINK_URL="https://www.segger.com/downloads/jlink/${SNIFF_JLINK_FILE}"
-
-###### MODIFY THIS VARIABLE TO CHANGE THE INSTALLATION DIRECTORY ###########
-SNIFF_JLINK_INSTALL_DIR="${HOME}/jlink_sniffer"
-
-SNIFF_UTIL_URL="https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil"
-SNIFF_UTIL_FILE="nrfutil"
