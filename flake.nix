@@ -78,7 +78,6 @@
             sh ~/scripts/install_zephyr_sdk.sh
             sh ~/scripts/install_stm32.sh
             sh ~/scripts/install_power_profiler.sh
-            sh ~/scripts/install_ble_sniffer.sh
         '';
         };
     };

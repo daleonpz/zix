@@ -94,3 +94,23 @@ $ sh scripts/run_power_profiler.sh
 
 2. If first time, you need to click on `install **Power Profiler**.`
 
+# Flashing ble sniffer
+Dongle [link](https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle)
+
+1. Start the power profiler app
+
+```bash
+$ sh scripts/run_power_profiler.sh
+```
+
+2. If first time, you need to click on `install **Programmer**.`, otherwise click on `open **Programmer**.`
+
+3. Connect the ble Sniffer to the computer and press the reset button on the device. The Red LED should blink 
+
+3. Click on `Select Device` and select the device,under devices should appear `Open DFU bootloader`
+
+4. Select the file to flash, in this case `scripts/sniffer_fw/hex/sniffer_nrf51dongle_nrf51422_4.1.1.hex`
+
+5. Click on `write` to flash the device
+
+6. Now if you go to `Select Device` you should see `nRF Sniffer for Bluetooth`
