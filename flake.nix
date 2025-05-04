@@ -73,7 +73,12 @@
             source .env/bin/activate
             export HOME=$(pwd)
             pip install west
-            west init
+            if [ -d ".west" ]; then
+              echo ".zephyr already initialized"
+            else
+              echo "Initializing zephyr"
+              west init
+            fi
             west update
             sh ~/scripts/install_zephyr_sdk.sh
             sh ~/scripts/install_stm32.sh
