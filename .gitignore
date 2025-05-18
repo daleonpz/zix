@@ -5,6 +5,10 @@ scripts/JLink_Linux_V794i_x86_64.tgz
 scripts/nrfconnect-5.1.0-x86_64.appimage
 .nrfconnect-apps/
 JLink
+.nrfutil/
+jlink_sniffer/
+scripts/JLink_Linux_V818_x86_64.tgz
+scripts/nrfutil
 
 # Nix related
 typescript
