@@ -141,18 +141,41 @@ git lfs pull
    west update
    ```
 
-3. Build the application, bootloader (MCUBoot), or both, using the provided Makefile. The Makefile is located in the root directory of the project **NOT in the application directory**.
+3. Build the application, bootloader (MCUBoot), or both, using the provided Makefile. The Makefile is located in the root directory of the project **NOT in the application directory**. A typical project structure looks like this:
+
+   ```bash
+   .
+   ├── app
+   │   ├── boards
+   │   ├── CMakeLists.txt
+   │   ├── config
+   │   ├── prj.conf
+   │   ├── README.rst
+   │   ├── sample.yaml
+   │   ├── src
+   │   └── west.yml
+   ├── flake.lock
+   ├── flake.nix
+   ├── LICENSE
+   ├── Makefile
+   ├── README.md
+   ├── JLink
+   ├── modules
+   ├── nrftools
+   ├── scripts
+   ├── STMicroelectronics
+   ├── tools
+   ├── zephyr
+   └── zephyr-sdk
+   ```
+
+The Makefile provides targets for building and flashing the application and bootloader:
 
    ```bash
    make app              # Build otau_example application
    make bootloader       # Build mcuboot bootloader
    make all              # Build both together (default)
    make app-codechecker  # Build application with codechecker
-   ```
-
-4. Flash to the board:
-
-   ```bash
    make flash-app        # Flash application
    make flash-bootloader # Flash bootloader
    make flash            # Flash all (bootloader + application)
@@ -169,14 +192,13 @@ There are several options you can pass to the `make` command:
    - `BOARD`: Target board (default: `nucleo_wb55rg`).
    - `APP_DIR`: Application directory (default: `app`).
 
-
-5. Clean build directories:
+4. Clean build directories:
 
    ```bash
    make clean
    ```
 
-6. See all available targets:
+5. See all available targets:
 
    ```bash
    make help
