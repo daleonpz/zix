@@ -21,23 +21,20 @@ export Q := @
 endif
 
 # Board definition 
-BOARD ?= nucleo_wb55rg
+DEFAULT_BOARD ?= nucleo_wb55rg
+BOARD ?= $(DEFAULT_BOARD)
 
 # Application Directory
-APP_DIR ?= app
-APP_DOMAIN ?= app
+DEFAULT_APP_DIR ?= app
+APP_DIR ?= $(DEFAULT_APP_DIR)
+APP_DOMAIN ?= $(APP_DIR)
 
 # West build directories
-APP_BUILD_DIR ?= build/$(APP_DOMAIN)
-BOOTLOADER_BUILD_DIR ?= build/mcuboot
-COMBINED_BUILD_DIR ?= build/combined
-
-.PHONY: all
-all: app bootloader
+APP_BUILD_DIR ?= build
 
 .PHONY: app
 app:
-	$(Q)west build -b $(BOARD) -s $(APP_DIR) --domain $(APP_DOMAIN) --pristine --sysbuild -d $(APP_BUILD_DIR)
+	$(Q)west build -b $(BOARD) -s $(APP_DIR) --domain $(APP_DOMAIN) --sysbuild -d $(APP_BUILD_DIR)
 
 .PHONY: app-codechecker
 app-codechecker:
@@ -45,11 +42,11 @@ app-codechecker:
 
 .PHONY: bootloader
 bootloader:
-	$(Q)west build -b $(BOARD) -s $(APP_DIR) --domain mcuboot --pristine --sysbuild -d $(BOOTLOADER_BUILD_DIR)
+	$(Q)west build -b $(BOARD) -s $(APP_DIR) --domain mcuboot --sysbuild -d $(APP_BUILD_DIR)
 
-.PHONY: combined
+.PHONY: all 
 combined:
-	$(Q)west build -b $(BOARD) -s $(APP_DIR) --pristine --sysbuild -d $(COMBINED_BUILD_DIR)
+	$(Q)west build -b $(BOARD) -s $(APP_DIR) --pristine --sysbuild -d $(APP_BUILD_DIR)
 
 .PHONY: test
 test:
@@ -61,15 +58,15 @@ flash-app: app
 
 .PHONY: flash-bootloader
 flash-bootloader: bootloader
-	$(Q)west flash -d $(BOOTLOADER_BUILD_DIR)
+	$(Q)west flash -d $(APP_BUILD_DIR) --domain mcuboot
 
-.PHONY: flash-combined
-flash-combined: combined
-	$(Q)west flash -d $(COMBINED_BUILD_DIR)
+.PHONY: flash
+flash: all
+	$(Q)west flash -d $(APP_BUILD_DIR)
 
 .PHONY: clean
 clean:
-	$(Q)rm -rf $(APP_BUILD_DIR) $(BOOTLOADER_BUILD_DIR) $(COMBINED_BUILD_DIR)
+	$(Q)rm -rf $(APP_BUILD_DIR)
 
 .PHONY: flake-update
 flake-update:
@@ -80,18 +77,17 @@ help:
 	@echo "usage: make [OPTIONS] <target>"
 	@echo "Options:"
 	@echo "  VERBOSE: Show verbose output (0 or 1, default 0)"
-	@echo "  BOARD: Target board (default: nucleo_wb55rg)"
+	@echo "  BOARD: Target board (default: $(DEFAULT_BOARD))"
 	@echo "  APP_DIR: Application directory (default: ${APP_DIR})"
 	@echo "Targets:"
 	@echo "  all: Build both application and bootloader"
 	@echo "  app: Build application"
 	@echo "  app-codechecker: Build application with codechecker"
 	@echo "  bootloader: Build mcuboot bootloader"
-	@echo "  combined: Build both application and bootloader together"
 	@echo "  test: Run twister tests for application"
+	@echo "  flash: Flash both application and bootloader"
 	@echo "  flash-app: Flash the application"
 	@echo "  flash-bootloader: Flash the bootloader"
-	@echo "  flash-combined: Flash the combined build"
 	@echo "  clean: Remove all build directories"
 	@echo "  flake-update: Update Nix flake"
 	@echo "  help: Show this help message"
