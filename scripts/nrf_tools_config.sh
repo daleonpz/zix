@@ -17,7 +17,6 @@
 JLINK_INSTALL_DIR="${HOME}/JLink"
 NRFTOOLS_DIR="${HOME}/nrftools"
 
-
 # This version of JLink is required for the nRF environment to work properly.
 JLINK_VER="818"
 JLINK_DIR="JLink_Linux_V${JLINK_VER}_x86_64"
