@@ -2,12 +2,12 @@ manifest:
   version: 0.8
 
   self:
-    path: otau-example
+    path: app
 
   remotes:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
-
+      
   projects:
     - name: zephyr
       remote: zephyrproject-rtos
@@ -19,22 +19,3 @@ manifest:
 #         name-allowlist:
 #           - cmsis
 #           - hal_nordic 
-#   projects:
-#     - name: nrf
-#       repo-path: sdk-nrf
-#       remote: nrfconnect
-#       revision: v2.5.1
-#       import:
-#         name-blocklist:
-#           - matter
-#           - nrf-802154
-#           - cjson
-#           - openthread
-#           - cmock
-#           - unity
-#           - cddl-gen
-#           - homekit
-#           - loramac-node
-#           - lz4
-#           - lvgl
-#           - mipi-sys-t
