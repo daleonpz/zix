@@ -14,6 +14,9 @@ scripts/nrfutil
 typescript
 .vim/
 .viminfo
+.config/
+.pki/
+nrftools/
 
 # Zepyhr
 bootloader/
@@ -26,6 +29,7 @@ zephyr-sdk/
 .wget-hsts
 .local-home/
 build-*/
+.gdbinit*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

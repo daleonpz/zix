@@ -72,6 +72,7 @@
             fi 
             source .env/bin/activate
             export HOME=$(pwd)
+            export LC_ALL=C
             pip install west
             if [ -d ".west" ]; then
               echo ".zephyr already initialized"
@@ -82,7 +83,9 @@
             west update
             sh ~/scripts/install_zephyr_sdk.sh
             sh ~/scripts/install_stm32.sh
-            sh ~/scripts/install_power_profiler.sh
+            sh ~/scripts/install_nrf_tools.sh
+            pip install codechecker
+            echo -e '\033[32m Zephyr development environment is ready!\033[0m'
         '';
         };
     };
