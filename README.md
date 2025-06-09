@@ -1,4 +1,4 @@
-# Zephyr Development Environment
+# Nix-Based Zephyr Development Environment (Zix)
 
 This project is designed to be built and run using Nix, providing a reproducible development environment for Zephyr RTOS. It includes scripts for building the application and MCUboot bootloader.
 
@@ -8,15 +8,12 @@ This project is designed to be built and run using Nix, providing a reproducible
 - [Project Status](#project-status)
 - [Getting Started](#getting-started)
     - [Requirements](#requirements)
-    - [Getting the Source](#getting-the-source)
-    - [Building](#building)
-    - [Testing](#testing)
-- [Documentation](#documentation)
+    - [Working with Zix](#working-with-zix)
+    - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [Authors](#authors)
 - [License](#license)
-- [Acknowledgments](#acknowledgments)
--[Extras](#extras)
+- [Extras](#extras)
     - [BLE Sniffer](#ble-sniffer)
 
 ## About the Project
@@ -28,7 +25,6 @@ This project is ideal for developers working with Zephyr RTOS, especially those 
 - BLE sniffer support for monitoring Bluetooth Low Energy communications.
 - STM32CubeProgrammer integration for flashing STM32 devices.
 - JLink support for debugging and programming.
-
 
 **[Back to top](#table-of-contents)**
 
@@ -69,107 +65,17 @@ To build and run this project, you need:
 
 - Zephyr SDK and west (included via Nix environment).
 
-**Hardware Setup**:
+### Working with Zix
 
-1. Set `STM32_INSTALL_DIR` in `scripts/install_stm32.sh`:
+1. Fork the repository on GitHub. `app` directory is where you will develop your application.
 
-   ```bash
-   STM32_INSTALL_DIR="${HOME}/STMicroelectronics/STM32Cube/STM32CubeProgrammer"
-   ```
-
-2. Set `JLINK_INSTALL_DIR` in `scripts/nrf_tools_config.sh`:
-
-   ```bash
-   JLINK_INSTALL_DIR="${HOME}/JLink"
-   ```
-
-3. Add your user to the device's group (e.g., `uucp`):
-
-   ```bash
-   ls -l /dev/ttyACM0  # Check group (e.g., uucp)
-   sudo usermod -a -G uucp $USER
-   sudo reboot
-   ```
-
-4. Copy and configure udev rules:
-
-   ```bash
-   sudo cp scripts/99-stlinkv2_1.rules /etc/udev/rules.d/
-   sudo udevadm control --reload-rules
-   sudo udevadm trigger
-   ```
-
-5. Create symlinks for STM32CubeProgrammer and JLink:
-
-   ```bash
-   sudo mkdir -p /opt/SEGGER/JLink
-   sudo ln -s /path/to/JLink/ /opt/SEGGER/JLink/
-   ``` 
-
-**[Back to top](#table-of-contents)**
-
-### Getting the Source
-
-Clone the repository with `git-lfs` installed:
-
-```bash
-git clone --recursive git@github.com:daleonpz/zephyr_nix_devenv.git
-```
-
-If you cloned without `--recursive`, run:
-
-```bash
-git submodule update --init
-git lfs pull
-```
-
-**[Back to top](#table-of-contents)**
-
-### Building
-
-1. Start the Nix shell:
+2. Start Nix shell:
 
    ```bash
    nix develop .
    ```
 
-2. Clone your application:
-   
-   ```bash
-   west init -m https://github.com/your-name/your-application your-app-worskpace
-   cd your-app-workspace
-   west update
-   ```
-
-3. Build the application, bootloader (MCUBoot), or both, using the provided Makefile. The Makefile is located in the root directory of the project **NOT in the application directory**. A typical project structure looks like this:
-
-   ```bash
-   .
-   ├── app
-   │   ├── boards
-   │   ├── CMakeLists.txt
-   │   ├── config
-   │   ├── prj.conf
-   │   ├── README.rst
-   │   ├── sample.yaml
-   │   ├── src
-   │   └── west.yml
-   ├── flake.lock
-   ├── flake.nix
-   ├── LICENSE
-   ├── Makefile
-   ├── README.md
-   ├── JLink
-   ├── modules
-   ├── nrftools
-   ├── scripts
-   ├── STMicroelectronics
-   ├── tools
-   ├── zephyr
-   └── zephyr-sdk
-   ```
-
-The Makefile provides targets for building and flashing the application and bootloader:
+3. A `Makefile` is provided in the root directory to build and flash your application and bootloader (MCUBoot).
 
    ```bash
    make app              # Build otau_example application
@@ -180,7 +86,6 @@ The Makefile provides targets for building and flashing the application and boot
    make flash-bootloader # Flash bootloader
    make flash            # Flash all (bootloader + application)
    ```
-
 There are several options you can pass to the `make` command:
 
    ```bash
@@ -192,41 +97,49 @@ There are several options you can pass to the `make` command:
    - `BOARD`: Target board (default: `nucleo_wb55rg`).
    - `APP_DIR`: Application directory (default: `app`).
 
-4. Clean build directories:
+4. If you modify `flake.nix` you need to update the Nix flake and restart the Nix shell:
 
    ```bash
-   make clean
+   nix flake update
+   git add flake.lock
+   git commit -m "Update flake.lock"
+   git push
+
+   nix develop .
    ```
-
-5. See all available targets:
-
-   ```bash
-   make help
-   ```
-
-**Updating Dependencies**:
-
-- Update `west.yml`: `west update`
-- Update `flake.nix` and `flake.lock`: `nix flake update`
-- Reload Nix shell: `nix develop .`
 
 **[Back to top](#table-of-contents)**
 
-### Testing
+### Troubleshooting
 
-Run tests using Zephyr's Twister framework:
+* If you encounter issues with the Nix environment, try running:
 
-```bash
-make test
-```
+   ```bash
+   nix-collect-garbage
+   ```
 
-Test results are saved in JUnit XML format in the respective build directories.
+* If you cannot access the serial port from Nix, add your user to the device's group (e.g., `uucp`):
 
-**[Back to top](#table-of-contents)**
+   ```bash
+   ls -l /dev/ttyACM0  # Check group (e.g., uucp)
+   sudo usermod -a -G uucp $USER
+   sudo reboot
+   ```
 
-## Documentation
+* If you are using ST-Link v2.1, you need to copy the udev rules file to your system:
 
-Documentation is not currently built locally (Makefile does not include a `docs` target). Check the project GitHub page for any available documentation or contribute to add a `docs` target.
+   ```bash
+   sudo cp scripts/99-stlinkv2_1.rules /etc/udev/rules.d/
+   sudo udevadm control --reload-rules
+   sudo udevadm trigger
+   ```
+
+* `nrfutil` searchs for JLinkArm library in /opt/SEGGER/JLink, so you need to create a symlink to the JLink directory:
+
+   ```bash
+   sudo mkdir -p /opt/SEGGER/JLink
+   sudo ln -s /full-path/to/JLink/* /opt/SEGGER/JLink/
+   ```
 
 **[Back to top](#table-of-contents)**
 
@@ -250,10 +163,6 @@ Copyright (c) 2025 Daniel Paredes (daleonpz)
 
 **[Back to top](#table-of-contents)**
 
-## Acknowledgments
-
-- Uses Zephyr RTOS for real-time operation and mcuboot for OTA updates.
-
 ## Extras
 ### BLE Sniffer
 This project uses BLE as a communication protocol for the wearable device. The [nRF52840 Dongle](https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle) can be configured as a BLE sniffer to capture and analyze Bluetooth Low Energy packets.
@@ -269,7 +178,7 @@ This project uses BLE as a communication protocol for the wearable device. The [
 3. Flash the sniffer firmware:
 
    ```bash
-   # Select: scripts/sniffer_fw/hex/sniffer_nrf51dongle_nrf51422_4.1.1.hex
+   # Select: nrftools/nrfutil_tools/hex/sniffer_nrf51dongle_nrf51422_4.1.1.hex
    # Click "write" to flash
    ```
 
