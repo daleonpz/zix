@@ -29,6 +29,9 @@ DEFAULT_APP_DIR ?= app
 APP_DIR ?= $(DEFAULT_APP_DIR)
 APP_DOMAIN ?= $(APP_DIR)
 
+# Test directory
+TEST_DIR ?= $(APP_DIR)/tests
+
 # West build directories
 APP_BUILD_DIR ?= build
 
@@ -50,7 +53,7 @@ combined:
 
 .PHONY: test
 test:
-	$(Q)west twister -T $(APP_DIR) --platform $(BOARD)
+	$(Q)west twister -T $(TEST_DIR) --platform $(BOARD)
 
 .PHONY: flash-app
 flash-app: app
@@ -79,6 +82,7 @@ help:
 	@echo "  VERBOSE: Show verbose output (0 or 1, default 0)"
 	@echo "  BOARD: Target board (default: $(DEFAULT_BOARD))"
 	@echo "  APP_DIR: Application directory (default: ${APP_DIR})"
+	@ech "   TEST_DIR: Test directory (default: ${TEST_DIR})"
 	@echo "Targets:"
 	@echo "  all: Build both application and bootloader"
 	@echo "  app: Build application"
