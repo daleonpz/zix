@@ -32,9 +32,6 @@ This project is ideal for developers working with Zephyr RTOS, especially those 
 
 The project is functional. It has been tested on the `nucleo_wb55rg` board and is ready for use in developing Zephyr applications with MCUboot support. The project is actively maintained, and contributions are welcome.
 
-Limitations:
-- Twister functionality is not fully implemented.
-
 **[Back to top](#table-of-contents)**
 
 ## Getting Started
