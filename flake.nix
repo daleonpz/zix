@@ -29,7 +29,7 @@
     {
         devShells.${system}.default = pkgs.mkShell {
             name = "zephyr-dev";
-            buildInputs = with pkgs; [
+            packages = with pkgs; [
                 cmake
                 ninja
                 gperf
