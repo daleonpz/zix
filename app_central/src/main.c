@@ -32,6 +32,11 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app);
 
+//
+// Enable or disable settings
+//
+#define CERT_EXCHANGE_ENABLE 0
+
 /******************************************************************************
  * Hardcoded Certs for testing - replace with actual certs as needed
  * ****************************************************************************/
@@ -98,6 +103,7 @@ static struct bt_conn *default_conn;
 
 static struct bt_conn_cb central_cb;
 static struct bt_conn_auth_cb central_auth_cb;
+static struct bt_conn_auth_info_cb central_auth_info_cb;
 
 static struct k_poll_signal conn_signal;
 static struct k_poll_signal passkey_enter_signal;
@@ -516,6 +522,10 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 
 	LOG_DBG("Connected to: %s", addr);
 	(void)mtu_exchange(conn);
+
+#if defined(CONFIG_SMP)
+	bt_le_oob_set_sc_flag(true); // enable LESC OOB for this connection
+#endif
 	k_poll_signal_raise(&conn_signal, 0);
 }
 
@@ -580,6 +590,45 @@ static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
 	LOG_DBG("Passkey for %s: %s", addr, passkey_str);
 }
 
+static void pairing_complete(struct bt_conn *conn, bool bonded)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+	LOG_INF("Pairing completed: %s, bonded: %d\n", addr, bonded);
+}
+
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+	LOG_INF("Pairing failed conn: %s, reason %d %s\n", addr, reason,
+		bt_security_err_to_str(reason));
+}
+
+static void oob_data_request(struct bt_conn *conn, struct bt_conn_oob_info *info)
+{
+	int err;
+	if (info->type != BT_CONN_OOB_LE_SC) {
+		LOG_DBG("OOB data request type not LESC");
+		return;
+	}
+	LOG_DBG("LESC OOB data requested");
+	struct bt_le_oob oob_local;
+	struct bt_le_oob_sc_data *oob_data_local = &oob_local.le_sc_data;
+	err = bt_le_oob_get_local(BT_ID_DEFAULT, &oob_local);
+	if (err) {
+		LOG_ERR("Error while fetching local OOB data: %d", err);
+	}
+	
+	// remote and local are the same in this test, because central and peripheral are using
+	// debug OOB data
+	// CONFIG_BT_TESTING=y
+	// CONFIG_BT_OOB_DATA_FIXED=y
+	// CONFIG_BT_USE_DEBUG_KEYS=y
+// 	bt_le_oob_set_sc_data(conn, oob_data_local, oob_data_local);
+}
+
 static void auth_cancel(struct bt_conn *conn)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -600,13 +649,26 @@ static int init_bt(void)
 	k_poll_signal_init(&gatt_write_signal);
 	k_poll_signal_init(&device_found_cb_completed);
 
+	
 	err = bt_enable(NULL);
 	if (err) {
 		LOG_ERR("Bluetooth init failed (err %d)", err);
 		return -1;
 	}
-
 	LOG_DBG("Bluetooth initialized");
+
+	/* Initialize settings */
+#if defined(CONFIG_BT_SETTINGS)
+	if (IS_ENABLED(CONFIG_SETTINGS)) {
+		LOG_INF("Calling settings_load()");
+		err = settings_load();
+		if (err < 0) {
+			LOG_ERR("Settings load failed (err %d)", err);
+			return err;
+		}
+	}
+	LOG_DBG("Settings loaded");
+#endif
 
 	err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
 	if (err) {
@@ -618,20 +680,42 @@ static int init_bt(void)
 // 	central_cb.security_changed = security_changed;
 // 	central_cb.identity_resolved = identity_resolved;
 
-	bt_conn_cb_register(&central_cb);
+	err = bt_conn_cb_register(&central_cb);
+	if (err) {
+		LOG_ERR("Failed to register connection callbacks (err %d)", err);
+		return -1;
+	}
 
-// 	central_auth_cb.pairing_confirm = NULL;
-// 	central_auth_cb.passkey_confirm = auth_passkey_confirm;
-// 	central_auth_cb.passkey_display = auth_passkey_display;
-// 	central_auth_cb.passkey_entry = NULL;
-// 	central_auth_cb.oob_data_request = NULL;
-// 	central_auth_cb.cancel = auth_cancel;
+#if defined(CONFIG_SMP)
+	central_auth_cb.pairing_confirm = NULL;
+	central_auth_cb.passkey_confirm = auth_passkey_confirm;
+	central_auth_cb.passkey_display = auth_passkey_display;
+	central_auth_cb.passkey_confirm = NULL;
+	central_auth_cb.passkey_display = NULL;
+	central_auth_cb.passkey_entry = NULL;
+	central_auth_cb.oob_data_request = NULL;
+	central_auth_cb.oob_data_request = oob_data_request;
+	central_auth_cb.cancel = auth_cancel;
 
-// 	err = bt_conn_auth_cb_register(&central_auth_cb);
-// 	if (err) {
-// 		return -1;
-// 	}
+	err = bt_conn_auth_cb_register(&central_auth_cb);
+	if (err) {
+		LOG_ERR("Failed to register authorization callbacks (err %d)", err);
+		return -1;
+	}
 
+	/***************************************************************/
+	/* in peripheral role, we need to register auth callbacks to handle
+	 */
+	central_auth_info_cb.pairing_complete = pairing_complete;
+	central_auth_info_cb.pairing_failed = pairing_failed;
+	central_auth_info_cb.bond_deleted = NULL;
+	err = bt_conn_auth_info_cb_register(&central_auth_info_cb);
+	if (err) {
+		LOG_ERR("Failed to register authorization info callbacks (err %d)", err);
+		return -1;
+	}
+	/****************************************************************/
+#endif
 	return 0;
 }
 
@@ -657,12 +741,14 @@ int main(void)
 		return -2;
 	}
 
+#if defined(CONFIG_SMP)
 	/* Update connection security level */
-// 	err = bt_conn_set_security(default_conn, BT_SECURITY_L4);
-// 	if (err) {
-// 		LOG_ERR("Failed to set security (err %d)", err);
-// 		return -3;
-// 	}
+	err = bt_conn_set_security(default_conn, BT_SECURITY_L2);
+	if (err) {
+		LOG_ERR("Failed to set security (err %d)", err);
+		return -3;
+	}
+#endif
 
 // 	await_signal(&passkey_enter_signal);
 
@@ -681,21 +767,34 @@ int main(void)
 		return -5;
 	}
 
+	struct bt_le_oob oob_local;
+
+	err = bt_le_oob_get_local(BT_ID_DEFAULT, &oob_local);
+	if (err) {
+		LOG_ERR("Error while fetching local OOB data: %d", err);
+	}
+
+	LOG_HEXDUMP_DBG(oob_local.le_sc_data.r, sizeof(oob_local.le_sc_data.r),
+			"Local OOB Randomizer R:");
+	LOG_HEXDUMP_DBG(oob_local.le_sc_data.c, sizeof(oob_local.le_sc_data.c),
+			"Local OOB Hash C:");
+
+#if CERT_EXCHANGE_ENABLE
 	/* Read the Device certificate characteristic */
 	err = gatt_read(default_conn, &central_certificate_uuid.uuid, _CENTRAL_CERT_LEN, start_handle, end_handle, _DEV_CERT);
 	if (err) {
 		LOG_ERR("GATT read failed (err %d)", err);
 		return -6;
 	}
-// 
-// 	LOG_DBG("Received Device Certificate:");
-// 	LOG_HEXDUMP_DBG(_DEV_CERT, _DEV_CERT_LEN, "Device Certificate:");
+	LOG_DBG("Received Device Certificate:");
+	LOG_HEXDUMP_DBG(_DEV_CERT, _DEV_CERT_LEN, "Device Certificate:");
 
 	err = gatt_write(default_conn, &device_certificate_uuid.uuid, _CENTRAL_CERT, _CENTRAL_CERT_LEN, start_handle, end_handle);
 	if (err) {
 		LOG_ERR("GATT write failed (err %d)", err);
 		return -8;
 	}
+#endif
 
 	/* Start a new scan to get and decrypt the Advertising Data */
 	err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
