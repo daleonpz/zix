@@ -1,0 +1,22 @@
+# Copyright (c) 2025 Daniel Paredes (daleonpz)
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Customized Menu Name"
+source "Kconfig.zephyr"  # Include Zephyr's Kconfig, needed for the base configuration
+
+menu "Application Options"
+config APP_LOG
+    bool "enable logging in main"
+    default y if LOG
+    depends on LOG
+    help
+      This option enables logging in the main module.
+endmenu
+
+if APP_LOG
+
+module = APP
+module-str = "app"
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

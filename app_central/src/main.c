@@ -18,6 +18,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/bluetooth/bluetooth.h>
 
@@ -523,9 +524,19 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	LOG_DBG("Connected to: %s", addr);
 	(void)mtu_exchange(conn);
 
-#if defined(CONFIG_SMP)
-	bt_le_oob_set_sc_flag(true); // enable LESC OOB for this connection
-#endif
+// #if defined(CONFIG_BT_SMP)
+// 	bt_le_oob_set_sc_flag(true); // enable LESC OOB for this connection
+// #endif
+
+// #if defined(CONFIG_BT_SMP)
+// 	/* Update connection security level */
+// 	err = bt_conn_set_security(default_conn, BT_SECURITY_L4);
+// 	if (err) {
+// 		LOG_ERR("Failed to set security (err %d)", err);
+// 		return -3;
+// 	}
+// #endif
+
 	k_poll_signal_raise(&conn_signal, 0);
 }
 
@@ -626,7 +637,7 @@ static void oob_data_request(struct bt_conn *conn, struct bt_conn_oob_info *info
 	// CONFIG_BT_TESTING=y
 	// CONFIG_BT_OOB_DATA_FIXED=y
 	// CONFIG_BT_USE_DEBUG_KEYS=y
-// 	bt_le_oob_set_sc_data(conn, oob_data_local, oob_data_local);
+	bt_le_oob_set_sc_data(conn, oob_data_local, oob_data_local);
 }
 
 static void auth_cancel(struct bt_conn *conn)
@@ -677,8 +688,10 @@ static int init_bt(void)
 
 	central_cb.connected = connected;
 	central_cb.disconnected = disconnected;
-// 	central_cb.security_changed = security_changed;
+#if defined(CONFIG_BT_SMP)
+	central_cb.security_changed = security_changed;
 // 	central_cb.identity_resolved = identity_resolved;
+#endif
 
 	err = bt_conn_cb_register(&central_cb);
 	if (err) {
@@ -686,14 +699,14 @@ static int init_bt(void)
 		return -1;
 	}
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_BT_SMP)
 	central_auth_cb.pairing_confirm = NULL;
 	central_auth_cb.passkey_confirm = auth_passkey_confirm;
 	central_auth_cb.passkey_display = auth_passkey_display;
 	central_auth_cb.passkey_confirm = NULL;
 	central_auth_cb.passkey_display = NULL;
 	central_auth_cb.passkey_entry = NULL;
-	central_auth_cb.oob_data_request = NULL;
+// 	central_auth_cb.oob_data_request = NULL;
 	central_auth_cb.oob_data_request = oob_data_request;
 	central_auth_cb.cancel = auth_cancel;
 
@@ -741,18 +754,15 @@ int main(void)
 		return -2;
 	}
 
-#if defined(CONFIG_SMP)
-	/* Update connection security level */
-	err = bt_conn_set_security(default_conn, BT_SECURITY_L2);
-	if (err) {
-		LOG_ERR("Failed to set security (err %d)", err);
-		return -3;
-	}
-#endif
-
 // 	await_signal(&passkey_enter_signal);
 
-// 	err = get_passkey_confirmation(default_conn);
+	/* Update connection security level */
+// 	err = bt_conn_set_security(default_conn, BT_SECURITY_L4);
+// 	if (err) {
+// 		LOG_ERR("Failed to set security (err %d)", err);
+// 		return -3;
+// 	}
+// 	err = bt_conn_auth_passkey_confirm(default_conn);
 // 	if (err) {
 // 		LOG_ERR("Security update failed");
 // 		return -4;
