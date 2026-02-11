@@ -38,6 +38,9 @@ LOG_MODULE_REGISTER(app);
 //
 #define CERT_EXCHANGE_ENABLE 1
 #define OOB_EXCHANGE_ENABLE  1
+#define CERT_LOG_ENABLE      0
+#define OOB_LOG_ENABLE       0
+
 
 struct bt_le_oob oob_local;
 struct bt_le_oob oob_remote;
@@ -672,29 +675,33 @@ static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
         bt_security_err_to_str(reason));
 }
 
+enum bt_security_err pairing_accept(struct bt_conn *conn, const struct bt_conn_pairing_feat *const feat)
+{
+//     bt_shell_print("Remote pairing features: "
+//                "IO: 0x%02x, OOB: %d, AUTH: 0x%02x, Key: %d, "
+//                "Init Kdist: 0x%02x, Resp Kdist: 0x%02x",
+//                feat->io_capability, feat->oob_data_flag,
+//                feat->auth_req, feat->max_enc_key_size,
+//                feat->init_key_dist, feat->resp_key_dist);
+
+    LOG_DBG("--- Accepting pairing");
+    return BT_SECURITY_ERR_SUCCESS;
+}
+
 static void oob_data_request(struct bt_conn *conn, struct bt_conn_oob_info *info)
 {
     int err;
+    LOG_DBG("-------LESC OOB data requested");
     if (info->type != BT_CONN_OOB_LE_SC) {
         LOG_DBG("OOB data request type not LESC");
         return;
     }
-    LOG_DBG("LESC OOB data requested");
-//     struct bt_le_oob oob_local;
-//     struct bt_le_oob_sc_data *oob_data_local = &oob_local.le_sc_data;
-//     err = bt_le_oob_get_local(BT_ID_DEFAULT, &oob_local);
-//     if (err) {
-//         LOG_ERR("Error while fetching local OOB data: %d", err);
-//     }
-    
     // remote and local are the same in this test, because central and peripheral are using
     // debug OOB data
     // CONFIG_BT_TESTING=y
     // CONFIG_BT_OOB_DATA_FIXED=y
     // CONFIG_BT_USE_DEBUG_KEYS=y
     bt_le_oob_set_sc_data(conn, &oob_local.le_sc_data, &oob_remote.le_sc_data);
-
-//     bt_le_oob_set_sc_data(conn, oob_data_local, oob_data_local);
 }
 
 static void auth_cancel(struct bt_conn *conn)
@@ -725,7 +732,7 @@ static int init_bt(void)
     }
     LOG_DBG("Bluetooth initialized");
 
-    /* Initialize settings */
+        /* Initialize settings */
 #if defined(CONFIG_BT_SETTINGS)
     if (IS_ENABLED(CONFIG_SETTINGS)) {
         LOG_INF("Calling settings_load()");
@@ -737,6 +744,17 @@ static int init_bt(void)
     }
     LOG_DBG("Settings loaded");
 #endif
+
+#if defined(CONFIG_BT_USE_DEBUG_KEYS)
+    err = bt_unpair(BT_ID_DEFAULT, NULL);
+	if (err) {
+		LOG_ERR("Bond remove failed err: %d", err);
+	} else {
+		LOG_INF("All bond removed");
+	}
+#endif
+
+    bt_le_oob_set_sc_flag(true);
 
     err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
     if (err) {
@@ -765,6 +783,7 @@ static int init_bt(void)
     central_auth_cb.passkey_entry = NULL;
 //  central_auth_cb.oob_data_request = NULL;
     central_auth_cb.oob_data_request = oob_data_request;
+    central_auth_cb.pairing_accept = pairing_accept;
     central_auth_cb.cancel = auth_cancel;
 
     err = bt_conn_auth_cb_register(&central_auth_cb);
@@ -862,8 +881,10 @@ int main(void)
         LOG_ERR("GATT read failed (err %d)", err);
         return -6;
     }
+#if CERT_LOG_ENABLE
     LOG_DBG("Received Device Certificate:");
     LOG_HEXDUMP_DBG(_DEV_CERT, _DEV_CERT_LEN, "Device Certificate:");
+#endif
     err = gatt_write(default_conn, &central_certificate_uuid.uuid, _CENTRAL_CERT, _CENTRAL_CERT_LEN, start_handle, end_handle);
     if (err) {
         LOG_ERR("GATT write failed (err %d)", err);
@@ -884,26 +905,29 @@ int main(void)
         LOG_ERR("OOB device read failed (err %d)", err);
         return -6;
     }
-    LOG_DBG(">>>>> Received OOB data:");
     memcpy(&oob_remote, oob_data_buf, sizeof(oob_remote));
+#if OOB_LOG_ENABLE
+    LOG_DBG(">>>>> Received OOB data:");
     bt_addr_le_to_str(&oob_remote.addr, addr_str, sizeof(addr_str));
     LOG_DBG("OOB data from %s:", addr_str);
     LOG_HEXDUMP_DBG(oob_remote.le_sc_data.r, sizeof(oob_remote.le_sc_data.r),
             "Remote OOB Randomizer R:");
     LOG_HEXDUMP_DBG(oob_remote.le_sc_data.c, sizeof(oob_remote.le_sc_data.c),
             "Remote OOB Hash C:");
-
+#endif
     err = bt_le_oob_get_local(BT_ID_DEFAULT, &oob_local);
     if (err) {
         LOG_ERR("Error while fetching local OOB data: %d", err);
         return -7;
     }
+#if OOB_LOG_ENABLE
     bt_addr_le_to_str(&oob_local.addr, addr_str, sizeof(addr_str));
     LOG_DBG("<<<<< Local OOB data for %s:", addr_str);
     LOG_HEXDUMP_DBG(oob_local.le_sc_data.r, sizeof(oob_local.le_sc_data.r),
             "Local OOB Randomizer R:");
     LOG_HEXDUMP_DBG(oob_local.le_sc_data.c, sizeof(oob_local.le_sc_data.c),
             "Local OOB Hash C:");
+#endif
     memcpy(oob_data_buf, &oob_local, sizeof(oob_local));
     LOG_DBG(">>>> Sending OOB data to peripheral...");
     err = gatt_write(default_conn, &central_oob_data_uuid.uuid, oob_data_buf, oob_data_len, start_handle, end_handle);
@@ -911,14 +935,19 @@ int main(void)
         LOG_ERR("OOB central write failed (err %d)", err);
         return -8;
     }
-#endif
+#endif // OOB_EXCHANGE_ENABLE
+
+    k_sleep(K_MSEC(3000)); // wait for a while before disconnecting, to allow the central to read the data
 
 // #ifdef CONFIG_BT_SMP
+//     LOG_DBG("Setting security level to L4...");
 //     err = bt_conn_set_security(default_conn, BT_SECURITY_L4);
 //     if (err) {
-//         bt_shell_error("Setting security failed (err %d)", err);
+//         LOG_ERR("Setting security failed (err %d)", err);
+//         return -3;
 //     }
 // #endif
+    k_sleep(K_MSEC(10000)); // wait for a while before disconnecting, to allow the central to read the data
 
     /* Start a new scan to get and decrypt the Advertising Data */
     err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
