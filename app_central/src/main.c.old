@@ -29,9 +29,6 @@
 
 #include <common/bt_str.h>
 
-#include "crypto.h"
-#include "key.h"
-
 #define LOG_LEVEL LOG_LEVEL_DBG
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app);
@@ -40,9 +37,8 @@ LOG_MODULE_REGISTER(app);
 // Enable or disable settings
 //
 #define CERT_EXCHANGE_ENABLE 1
-#define OOB_EXCHANGE_ENABLE  0
-#define SECURE_DATA_EXCHANGE_ENABLE 0
-#define CERT_LOG_ENABLE      1
+#define OOB_EXCHANGE_ENABLE  1
+#define CERT_LOG_ENABLE      0
 #define OOB_LOG_ENABLE       0
 
 
@@ -54,15 +50,12 @@ struct bt_le_oob oob_remote;
  * Hardcoded Certs for testing - replace with actual certs as needed
  * ****************************************************************************/
 #define MAX_CERT_SIZE 256
-// static const uint8_t _CENTRAL_CERT[MAX_CERT_SIZE] = "---BEGIN CERTIFICATE---\n"
-//                         "miibiJanbGKQHKIg9W0baqefaaocaq8amiibcGkcaqeaZvHe\n"
-//                         "-----END CERTIFICATE-----\n";
-// static const uint16_t _CENTRAL_CERT_LEN = sizeof(_CENTRAL_CERT);
-// static uint8_t _DEV_CERT[MAX_CERT_SIZE];
+static const uint8_t _CENTRAL_CERT[MAX_CERT_SIZE] = "---BEGIN CERTIFICATE---\n"
+                        "miibiJanbGKQHKIg9W0baqefaaocaq8amiibcGkcaqeaZvHe\n"
+                        "-----END CERTIFICATE-----\n";
+static const uint16_t _CENTRAL_CERT_LEN = sizeof(_CENTRAL_CERT);
+static uint8_t _DEV_CERT[MAX_CERT_SIZE];
 static uint16_t _DEV_CERT_LEN = 0;
-
-static struct crypto_cert per_cert;
-static crypto_key_id per_pubkey_id;
 
 /******************************************************************************
  * Custom Services UUIDS for certificate validation and secure data write
@@ -476,9 +469,8 @@ static int gatt_read(struct bt_conn *conn, const struct bt_uuid *uuid, size_t re
         offset += gatt_read_len;
     }
 
-//     _DEV_CERT_LEN = offset;
-//     LOG_DBG("Total read size: %u", _DEV_CERT_LEN);
-    LOG_DBG("Total read size: %u", offset);
+    _DEV_CERT_LEN = offset;
+    LOG_DBG("Total read size: %u", _DEV_CERT_LEN);
     return 0;
 }
 
@@ -838,18 +830,6 @@ int main(void)
         return -1;
     }
 
-    err = crypto_init();
-    if (err) {
-        LOG_ERR("Crypto init failed (err %d)", err);
-        return -1;
-    }
-
-    err = crypto_import_keys();
-    if (err) {
-        LOG_ERR("Crypto import keys failed (err %d)", err);
-        return -1;
-    }
-
     /* Start scan and connect to our peripheral */
     connect = true;
     err = start_scan(connect);
@@ -909,25 +889,16 @@ int main(void)
 #if CERT_EXCHANGE_ENABLE
     /* Read the Device certificate characteristic */
 //     err = gatt_read(default_conn, &device_certificate_uuid.uuid, _CENTRAL_CERT_LEN, start_handle, end_handle, _DEV_CERT);
-//     err = gatt_read(default_conn, &device_certificate_uuid.uuid, sizeof(_DEV_CERT), handle_recv_device_cert, handle_recv_device_cert, _DEV_CERT);
-    err = gatt_read(default_conn, &device_certificate_uuid.uuid, sizeof(per_cert), handle_recv_device_cert, handle_recv_device_cert, (uint8_t *)&per_cert);
+    err = gatt_read(default_conn, &device_certificate_uuid.uuid, sizeof(_DEV_CERT), handle_recv_device_cert, handle_recv_device_cert, _DEV_CERT);
     if (err) {
         LOG_ERR("GATT read failed (err %d)", err);
         return -6;
     }
-
-    err = crypto_verify_cert(&per_cert, &per_pubkey_id);
-    if (err) {
-        LOG_ERR("Certificate verification failed (err %d)", err);
-        return -7;
-    }
-
 #if CERT_LOG_ENABLE
     LOG_DBG("Received Device Certificate:");
-    LOG_HEXDUMP_DBG(&per_cert, sizeof(per_cert), "Device Certificate:");
+    LOG_HEXDUMP_DBG(_DEV_CERT, _DEV_CERT_LEN, "Device Certificate:");
 #endif
-//     err = gatt_write(default_conn, &central_certificate_uuid.uuid, _CENTRAL_CERT, _CENTRAL_CERT_LEN, start_handle, end_handle);
-    err = gatt_write(default_conn, &central_certificate_uuid.uuid, (uint8_t *)&dev_cert, sizeof(dev_cert), start_handle, end_handle);
+    err = gatt_write(default_conn, &central_certificate_uuid.uuid, _CENTRAL_CERT, _CENTRAL_CERT_LEN, start_handle, end_handle);
     if (err) {
         LOG_ERR("GATT write failed (err %d)", err);
         return -8;
@@ -994,7 +965,6 @@ int main(void)
     // THIS should trigger a secure read 
 
     // how to read data until nothing is left to read?
-#if SECURE_DATA_EXCHANGE_ENABLE
     uint8_t secure_data[20];
     LOG_DBG("Reading Secure Data characteristic...");
     err = gatt_read(default_conn, &data_uuid.uuid, sizeof(secure_data), handle_secure_data, handle_secure_data, secure_data);
@@ -1012,7 +982,6 @@ int main(void)
         LOG_ERR("GATT write of Secure Data failed (err %d)", err);
         return -8;
     }
-#endif
 
     k_sleep(K_MSEC(5000)); // wait for a while before disconnecting, to allow the central to read the data
 
@@ -1027,12 +996,6 @@ int main(void)
     err = start_scan(connect);
     if (err) {
         return -2;
-    }
-
-    err = crypto_clean();
-    if (err) {
-        LOG_ERR("Crypto clean failed (err %d)", err);
-        return -1;
     }
 
     return 0;
